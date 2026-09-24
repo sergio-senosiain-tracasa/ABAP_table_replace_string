@@ -1,13 +1,11 @@
 *&---------------------------------------------------------------------*
-*& Report  ZHR_HG_TABLE_UPD_CONTENT
+*& Report  ZTEST_GIT_TABLE_REPLACE_STRING
 *&
 *&---------------------------------------------------------------------*
 *&
 *&
 *&---------------------------------------------------------------------*
-report zhr_hg_table_upd_content.
-
-tables: dd02l, dd03l.
+report ztest_git_table_replace_string.
 
 types: begin of t_tab_chg,
          tabname   type tabname,
@@ -16,10 +14,11 @@ types: begin of t_tab_chg,
          new       type string,
        end of t_tab_chg.
 
-data gt_tab_chg type standard table of t_tab_chg with default key ##NEEDED.
+data gt_tab_chg type standard table of t_tab_chg with default key
+      with header line ##NEEDED.
 
-select-options: so_tabnm for dd03l-tabname.
-select-options: so_fldnm for dd03l-fieldname.
+select-options: so_tabnm for gt_tab_chg-tabname.
+select-options: so_fldnm for gt_tab_chg-fieldname.
 
 selection-screen: begin of line,
   comment 14(14) text-cas,
@@ -56,16 +55,7 @@ parameters: p_test as checkbox default 'X'.
 
 start-of-selection.
 
-
-  select tabname
-    from dd02l
-    into table @data(lt_tabname)
-    where tabname in @so_tabnm
-      and tabclass = 'TRANSP'.    " Asegura que sean tablas transparentes
-
-  loop at lt_tabname into data(l_tabname).
-    perform check_table using l_tabname.
-  endloop.
+  perform select_tables.
 
 end-of-selection.
 
@@ -160,18 +150,18 @@ form check_table using p_tabname.
   if lines( <lt_contents_upd> ) gt 0 and p_test is initial.
     delete (p_tabname) from table <lt_contents_del>.
     if sy-subrc ne 0.
-      rollback work.
-      message e398(00) with  'Tabla' p_tabname 'error al borrar'.
+      rollback work.                                   "#EC CI_ROLLBACK
+      message e398(00) with  'Tabla' p_tabname 'error al borrar' ##MG_MISSING ##NO_TEXT.
       return.
     endif.
     insert (p_tabname) from table <lt_contents_upd>.
     if sy-subrc ne 0.
-      rollback work.
-      message e398(00) with  'Tabla' p_tabname 'error al insertar'.
+      rollback work.                                   "#EC CI_ROLLBACK
+      message e398(00) with  'Tabla' p_tabname 'error al insertar' ##MG_MISSING ##NO_TEXT.
       return.
     endif.
-    message i398(00) with 'Tabla' p_tabname 'modificada correctamente'.
-    commit work.
+    message i398(00) with 'Tabla' p_tabname 'modificada correctamente' ##MG_MISSING ##NO_TEXT.
+    commit work.                                       "#EC CI_ROLLBACK
   endif.
 endform.
 
@@ -229,4 +219,23 @@ form change_value using p_tabname p_fieldname
       p_hay_cambios = abap_true.
     endif.
   endif.
+endform.
+*&---------------------------------------------------------------------*
+*&      Form  SELECT_TABLES
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+form select_tables .
+  select tabname
+    from dd02l
+    into table @data(lt_tabname)
+    where tabname in @so_tabnm
+      and tabclass = 'TRANSP'.    " Asegura que sean tablas transparentes
+
+  loop at lt_tabname into data(l_tabname).
+    perform check_table using l_tabname.
+  endloop.
 endform.
